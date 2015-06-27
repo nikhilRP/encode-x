@@ -72,7 +72,7 @@
         <artifactId>maven-license-plugin</artifactId>
         <version>1.10.b1</version>
         <configuration>
-          <header>LICENSE_header.txt</header>
+          <header>LICENSE.txt</header>
           <strictCheck>true</strictCheck>
           <includes>
             <include>**/src/main/scala/**</include>
