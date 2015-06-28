@@ -10,7 +10,7 @@
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.encodedcc.encode-x</groupId>
+  <groupId>org.encodedcc.encodex</groupId>
   <artifactId>encode-x-parent</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <packaging>pom</packaging>
@@ -207,7 +207,7 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
-        <groupId>org.encodedcc.encode-x</groupId>
+        <groupId>org.encodedcc.encodex</groupId>
         <artifactId>encode-x-core</artifactId>
         <version>${project.version}</version>
       </dependency>
