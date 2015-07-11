@@ -226,11 +226,6 @@
         <version>0.4.0</version>
       </dependency>
       <dependency>
-        <groupId>org.bdgenomics.mango</groupId>
-        <artifactId>mango-core</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
         <groupId>org.bdgenomics.utils</groupId>
         <artifactId>utils-misc_2.10</artifactId>
         <version>${utils.version}</version>
