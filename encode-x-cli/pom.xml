@@ -16,49 +16,7 @@
   <name>encode-x-cli: an distributed engine for ENCODE data</name>
 
   <build>
-    <outputDirectory>target/scala-${scala.version}/classes</outputDirectory>
-    <testOutputDirectory>target/scala-${scala.version}/test-classes</testOutputDirectory>
     <plugins>
-      <plugin>
-        <groupId>com.mycila.maven-license-plugin</groupId>
-        <artifactId>maven-license-plugin</artifactId>
-        <version>1.10.b1</version>
-        <configuration>
-          <header>LICENSE_header.txt</header>
-          <strictCheck>true</strictCheck>
-          <properties>
-            <owner>ENCODE DCC, Stanford University</owner>
-            <email>nikhilrp@stanford.edu</email>
-          </properties>
-          <includes>
-            <include>**/src/main/scala/**</include>
-            <include>**/src/test/scala/**</include>
-            <include>**/src/main/java/**</include>
-            <include>**/src/test/scala/**</include>
-          </includes>
-        </configuration>
-        <executions>
-          <execution>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.1</version>
-        <configuration>
-          <source>${java.version}</source>
-          <target>${java.version}</target>
-        </configuration>
-      </plugin>
-      <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>appassembler-maven-plugin</artifactId>
-          <version>1.8</version>
-      </plugin>
       <plugin>
         <groupId>net.alchim31.maven</groupId>
         <artifactId>scala-maven-plugin</artifactId>
@@ -109,9 +67,24 @@
         </configuration>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>2.1</version>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>appassembler-maven-plugin</artifactId>
+        <configuration>
+          <programs>
+            <program>
+              <mainClass>org.encodedcc.cli.EncodeReads</mainClass>
+              <id>Enocde-x</id>
+            </program>
+          </programs>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>assemble</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
       <!-- disable surefire -->
       <plugin>
@@ -127,22 +100,18 @@
         <groupId>org.scalatest</groupId>
         <artifactId>scalatest-maven-plugin</artifactId>
         <version>1.0-RC2</version>
-      </plugin>
-      <plugin>
-        <groupId>org.scalariform</groupId>
-        <artifactId>scalariform-maven-plugin</artifactId>
-        <version>0.1.4</version>
+        <configuration>
+          <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+          <junitxml>.</junitxml>
+          <filereports>mangoTestSuite.txt</filereports>
+          <argLine>-Xmx1024m</argLine>
+        </configuration>
         <executions>
           <execution>
-            <phase>process-sources</phase>
+            <id>test</id>
             <goals>
-              <goal>format</goal>
+              <goal>test</goal>
             </goals>
-            <configuration>
-              <alignParameters>true</alignParameters>
-              <alignSingleLineCaseStatements>true</alignSingleLineCaseStatements>
-              <doubleIndentClassDeclaration>true</doubleIndentClassDeclaration>
-            </configuration>
           </execution>
         </executions>
       </plugin>
