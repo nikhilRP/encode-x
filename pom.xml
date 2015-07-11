@@ -26,7 +26,7 @@
     <utils.version>0.2.2</utils.version>
     <htsjdk.version>1.133</htsjdk.version>
     <!-- Edit the following line to configure the Hadoop (HDFS) version. -->
-    <hadoop.version>2.2.0</hadoop.version>
+    <hadoop.version>2.5.1</hadoop.version>
   </properties>
 
   <modules>
@@ -54,7 +54,7 @@
       <name>Nikhil R Podduturi</name>
       <email>nikhilrp@sanford.edu</email>
       <organization>Stanford University, ENCODE DCC</organization>
-      <organizationUrl>http://wwe.encodedproject.org/</organizationUrl>
+      <organizationUrl>http://www.encodedproject.org/</organizationUrl>
     </developer>
   </developers>
 

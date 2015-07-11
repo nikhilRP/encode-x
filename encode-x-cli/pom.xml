@@ -103,7 +103,7 @@
         <configuration>
           <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
           <junitxml>.</junitxml>
-          <filereports>mangoTestSuite.txt</filereports>
+          <filereports>encodexTestSuite.txt</filereports>
           <argLine>-Xmx1024m</argLine>
         </configuration>
         <executions>
@@ -126,10 +126,6 @@
     <dependency>
       <groupId>it.unimi.dsi</groupId>
       <artifactId>fastutil</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.bdgenomics.mango</groupId>
-      <artifactId>mango-core</artifactId>
     </dependency>
     <dependency>
       <groupId>org.bdgenomics.utils</groupId>
