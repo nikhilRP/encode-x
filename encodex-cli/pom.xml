@@ -128,10 +128,6 @@
       <artifactId>fastutil</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.encodedcc.encodex</groupId>
-      <artifactId>encodex-core</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.bdgenomics.utils</groupId>
       <artifactId>utils-misc_2.10</artifactId>
       <type>test-jar</type>
