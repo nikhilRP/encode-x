@@ -17,7 +17,7 @@
   <name>encodeX: an distributed engine for ENCODE data</name>
 
   <properties>
-    <adam.version>0.17.1-SNAPSHOT</adam.version>
+    <adam.version>0.17.0</adam.version>
     <avro.version>1.7.6</avro.version>
     <java.version>1.7</java.version>
     <scala.version>2.10.3</scala.version>
