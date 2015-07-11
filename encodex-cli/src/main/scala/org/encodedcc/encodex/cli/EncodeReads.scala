@@ -13,25 +13,21 @@ import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, GenotypeAllele, NucleotideContigFragment }
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.fusesource.scalate.TemplateEngine
+import org.json4s._
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
 import org.scalatra.json._
 import org.scalatra.ScalatraServlet
-import org.json4s.{ DefaultFormats, Formats }
+import parquet.filter2.predicate.FilterPredicate
+import parquet.filter2.dsl.Dsl._
 
 object EncodeTimers extends Metrics {
-  //HTTP requests
   val ReadsRequest = timer("GET reads")
-
-  //RDD operations
   var LoadParquetFile = timer("Loading from Parquet")
-
-  //Generating Json
-  val MakingTrack = timer("Making Track")
 }
 
 object EncodeReads extends BDGCommandCompanion with Logging {
-  val commandName: String = "ENCODE X"
-  val commandDescription: String = "an distributed data engine for ENCODE files"
+  val commandName: String = "encodex"
+  val commandDescription: String = "Alignments from ENCODE"
 
   var sc: SparkContext = null
   var server: org.eclipse.jetty.server.Server = null
@@ -70,10 +66,6 @@ class EncodeReadsArgs extends Args4jBase with ParquetArgs {
 class EncodeXServlet extends ScalatraServlet with JacksonJsonSupport {
   protected implicit val jsonFormats: Formats = DefaultFormats
 
-  before() {
-    contentType = formats("json")
-  }
-
   get("/?") {
     redirect(url("search"))
   }
@@ -96,18 +88,21 @@ class EncodeXServlet extends ScalatraServlet with JacksonJsonSupport {
       }
     }
   }
-
 }
 
 class EncodeReads(protected val args: EncodeReadsArgs) extends BDGSparkCommand[EncodeReadsArgs] with Logging {
   val companion: BDGCommandCompanion = EncodeReads
+
   override def run(sc: SparkContext): Unit = {
     EncodeReads.sc = sc
+
     EncodeReads.server = new org.eclipse.jetty.server.Server(args.port)
     val handlers = new org.eclipse.jetty.server.handler.ContextHandlerCollection()
     EncodeReads.server.setHandler(handlers)
-    handlers.addHandler(new org.eclipse.jetty.webapp.WebAppContext("encode-x-cli/src/main/webapp", "/"))
+    handlers.addHandler(new org.eclipse.jetty.webapp.WebAppContext("encodex-cli/src/main/webapp", "/"))
     EncodeReads.server.start()
+    println("Search file at: /search/:file")
+    println("Quit at: /quit")
     EncodeReads.server.join()
   }
 }

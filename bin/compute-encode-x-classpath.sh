@@ -11,8 +11,8 @@ REPO="$SCRIPT_DIR/repo"
 
 # Fallback to source repo
 if [ ! -f $ENCODE_CMD ]; then
-ENCODE_CMD="$SCRIPT_DIR/encode-x-cli/target/appassembler/bin/encode-x"
-REPO="$SCRIPT_DIR/encode-x-cli/target/appassembler/repo"
+ENCODE_CMD="$SCRIPT_DIR/encodex-cli/target/appassembler/bin/encode-x"
+REPO="$SCRIPT_DIR/encodex-cli/target/appassembler/repo"
 fi
 
 if [ ! -f "$ENCODE_CMD" ]; then

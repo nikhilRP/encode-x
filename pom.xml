@@ -11,10 +11,10 @@
 
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.encodedcc.encodex</groupId>
-  <artifactId>encode-x-parent</artifactId>
+  <artifactId>encodex-parent</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <packaging>pom</packaging>
-  <name>ENCODE-X: an distributed engine for ENCODE data</name>
+  <name>encodeX: an distributed engine for ENCODE data</name>
 
   <properties>
     <adam.version>0.17.1-SNAPSHOT</adam.version>
@@ -22,21 +22,21 @@
     <java.version>1.7</java.version>
     <scala.version>2.10.3</scala.version>
     <scala.version.prefix>2.10</scala.version.prefix>
-    <spark.version>1.2.1</spark.version>
+    <spark.version>1.2.0</spark.version>
     <utils.version>0.2.2</utils.version>
     <htsjdk.version>1.133</htsjdk.version>
     <!-- Edit the following line to configure the Hadoop (HDFS) version. -->
-    <hadoop.version>2.5.1</hadoop.version>
+    <hadoop.version>2.2.0</hadoop.version>
   </properties>
 
   <modules>
-    <module>encode-x-cli</module>
+    <module>encodex-cli</module>
   </modules>
 
   <licenses>
     <license>
-      <name>MIT License</name>
-      <url>https://raw.github.com/nikhilrp/encode-x/master/LICENSE.txt</url>
+      <name>Apache License</name>
+      <url>https://raw.github.com/nikhilrp/encodex/master/LICENSE.txt</url>
       <distribution>repo</distribution>
     </license>
   </licenses>
@@ -52,9 +52,9 @@
     <developer>
       <id>nikhilrp</id>
       <name>Nikhil R Podduturi</name>
-      <email>nikhilrp@sanford.edu</email>
-      <organization>Stanford University, ENCODE DCC</organization>
-      <organizationUrl>http://www.encodedproject.org/</organizationUrl>
+      <email>nikhilrp@stanford.edu</email>
+      <organization>Stanford University, Department of Genetics</organization>
+      <organizationUrl>http://www.stanford.edu/</organizationUrl>
     </developer>
   </developers>
 
@@ -72,10 +72,10 @@
         <artifactId>maven-license-plugin</artifactId>
         <version>1.10.b1</version>
         <configuration>
-          <header>LICENSE.txt</header>
+          <header>LICENSE_header.txt</header>
           <strictCheck>true</strictCheck>
           <properties>
-            <owner>ENCODE DCC</owner>
+            <owner>ENCODE-DCC</owner>
             <email>nikhilrp@stanford.edu</email>
           </properties>
           <includes>
