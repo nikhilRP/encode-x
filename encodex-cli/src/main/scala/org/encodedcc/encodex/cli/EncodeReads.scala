@@ -66,15 +66,19 @@ class EncodeReadsArgs extends Args4jBase with ParquetArgs {
 class EncodeXServlet extends ScalatraServlet with JacksonJsonSupport {
   protected implicit val jsonFormats: Formats = DefaultFormats
 
+  before() {
+    contentType = formats("json")
+  }
+
   get("/?") {
     redirect(url("search"))
   }
 
   get("/search") {
-    "Welcome to ENCODE BAM file alignment retrivel engine"
+    FlowerData.all
   }
 
-  get("/search/:file") {
+  /*get("/search/:file") {
     EncodeTimers.ReadsRequest.time {
       var fileName: String = params.get("file").toString
       if (params("ref") != null) {
@@ -87,7 +91,19 @@ class EncodeXServlet extends ScalatraServlet with JacksonJsonSupport {
         }
       }
     }
-  }
+  }*/
+}
+
+// A Flower object to use as a faked-out data model
+case class Flower(slug: String, name: String)
+
+// An amazing datastore!
+object FlowerData {
+  var all = List(
+      Flower("yellow-tulip", "Yellow Tulip"),
+      Flower("red-rose", "Red Rose"),
+      Flower("black-rose", "Black Rose")
+  )
 }
 
 class EncodeReads(protected val args: EncodeReadsArgs) extends BDGSparkCommand[EncodeReadsArgs] with Logging {
