@@ -30,6 +30,7 @@
   </properties>
 
   <modules>
+    <module>encodex-core</module>
     <module>encodex-cli</module>
   </modules>
 
@@ -224,6 +225,11 @@
         <groupId>org.bdgenomics.bdg-formats</groupId>
         <artifactId>bdg-formats</artifactId>
         <version>0.4.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.encodedcc.encodex</groupId>
+        <artifactId>encodex-core</artifactId>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.utils</groupId>
