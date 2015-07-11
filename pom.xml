@@ -74,6 +74,10 @@
         <configuration>
           <header>LICENSE.txt</header>
           <strictCheck>true</strictCheck>
+          <properties>
+            <owner>ENCODE DCC</owner>
+            <email>nikhilrp@stanford.edu</email>
+          </properties>
           <includes>
             <include>**/src/main/scala/**</include>
             <include>**/src/test/scala/**</include>
