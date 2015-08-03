@@ -1,15 +1,8 @@
 var readJsonLocation = "/reads/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
-var referenceStringLocation = "/reference/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
 
 //Add Region Info
 d3.select("h2")
     .text("current region: " + readRefName + ": "+ readRegStart + "-" + readRegEnd);
-
-//Reference
-var refContainer = d3.select("#refArea")
-    .append("svg")
-    .attr("width", width)
-    .attr("height", 40);
 
 
 // Create the scale for the axis
@@ -20,46 +13,6 @@ var axisScale = d3.scale.linear()
 // Create the axis
 var xAxis = d3.svg.axis()
    .scale(axisScale);
-
-// Add the axis to the container
-refContainer.append("g")
-    .attr("class", "axis")
-    .call(xAxis);
-
-//Adding Reference rectangles
-d3.json(referenceStringLocation, function(error, data) {
-    refContainer.selectAll("rect").data(data)
-    .enter()
-        .append("g")
-        .append("rect")
-            .attr("x", function(d, i) {
-                return i/(readRegEnd-readRegStart) * width;
-            })
-            .attr("y", 30)
-            .attr("fill", function(d) {
-                if (d.reference === "G") {
-                    return '#296629'; //DARK GREEN
-                } else if (d.reference === "C") {
-                    return '#CC2900'; //RED
-                } else if (d.reference === "A") { 
-                    return '#0066FF'; //BLUE
-                } else {
-                    return '#FF6600'; //ORANGE
-                }
-            })
-            .attr("width", function(d) {
-                return Math.max(1, width/(readRegEnd-readRegStart));
-            })
-            .attr("height", 10)
-            .on("mouseover", function(d) {
-                div.transition()
-                    .duration(200)
-                    .style("opacity", .9);
-                div.html(d.reference)
-                    .style("left", (d3.event.pageX - 10) + "px")
-                    .style("top", (d3.event.pageY - 30) + "px");
-            })
-});
 
 
 //Adding Reads
@@ -210,7 +163,6 @@ function update(newStart, newEnd) {
     readRegEnd = newEnd;
     readJsonLocation = ("/reads/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd);
     var numTracks = 0;
-    var referenceStringLocation = "/reference/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
     
     //Update Region Info
     d3.select("h2")
@@ -232,41 +184,6 @@ function update(newStart, newEnd) {
     refContainer.append("g")
         .attr("class", "axis")
         .call(xAxis);
-
-    //Updating reference rectangles
-    d3.json(referenceStringLocation, function(error, data) {
-        refContainer.selectAll("rect").data(data)
-        .enter()
-            .append("g")
-            .append("rect")
-                .attr("x", function(d, i) {
-                    return i/(readRegEnd-readRegStart) * width;
-                })
-                .attr("y", 30)
-                .attr("fill", function(d, i) {
-                    if (d.reference === "G") {
-                        return '#296629'; //DARK GREEN
-                    } else if (d.reference === "C") {
-                        return '#CC2900'; //RED
-                    } else if (d.reference === "A") { 
-                        return '#0066FF'; //BLUE
-                    } else {
-                        return '#FF6600'; //ORANGE
-                    }
-                })
-                .attr("width", function(d) {
-                    return Math.max(1, width/(readRegEnd-readRegStart));
-                })
-                .attr("height", 10)
-                .on("mouseover", function(d) {
-                    div.transition()
-                        .duration(200)
-                        .style("opacity", .9);
-                    div.html(d.reference)
-                        .style("left", (d3.event.pageX - 10) + "px")
-                        .style("top", (d3.event.pageY - 30) + "px");
-                });
-    });
 
     //Updating
     d3.json(readJsonLocation, function(error, data) {

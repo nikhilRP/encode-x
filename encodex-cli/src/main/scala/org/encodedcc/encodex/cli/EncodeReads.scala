@@ -10,30 +10,54 @@ import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.models.ReferencePosition
 import org.bdgenomics.adam.projections.{ Projection, VariantField, AlignmentRecordField, GenotypeField, NucleotideContigFragmentField, FeatureField }
 import org.bdgenomics.adam.rdd.ADAMContext._
+import org.encodedcc.encodex.models.OrderedTrackedLayout
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, GenotypeAllele, NucleotideContigFragment }
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.fusesource.scalate.TemplateEngine
 import org.json4s._
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
-import org.scalatra.json._
+import net.liftweb.json.Serialization.write
 import org.scalatra.ScalatraServlet
-import parquet.filter2.predicate.FilterPredicate
-import parquet.filter2.dsl.Dsl._
+import org.apache.parquet.filter2.predicate.FilterPredicate
+import org.apache.parquet.filter2.dsl.Dsl._
 
-object EncodeTimers extends Metrics {
+object EncodeXTimers extends Metrics {
+  //HTTP requests
   val ReadsRequest = timer("GET reads")
+
+  //RDD operations
   var LoadParquetFile = timer("Loading from Parquet")
+  val ReadsRDDTimer = timer("RDD Reads operations")
+
+  //Generating JSON
+  val MakingTrack = timer("Making Track")
+  val DoingCollect = timer("Doing Collect")
+  val PrintTrackJsonTimer = timer("JSON printTrackJson")
 }
 
 object EncodeReads extends BDGCommandCompanion with Logging {
-  val commandName: String = "encodex"
-  val commandDescription: String = "Alignments from ENCODE"
+
+  val commandName: String = "encode-x"
+  val commandDescription: String = "distributed engine for ENCODE data"
 
   var sc: SparkContext = null
+  var refName: String = ""
+  var readsPath: String = ""
+  var readsExist: Boolean = false
   var server: org.eclipse.jetty.server.Server = null
 
   def apply(cmdLine: Array[String]): BDGCommand = {
     new EncodeReads(Args4j[EncodeReadsArgs](cmdLine))
+  }
+
+  //Prepares reads information in json format
+  def printTrackJson(layout: OrderedTrackedLayout[AlignmentRecord]): List[TrackJson] = EncodeXTimers.PrintTrackJsonTimer.time {
+    var tracks = new scala.collection.mutable.ListBuffer[TrackJson]
+    for (rec <- layout.trackAssignments) {
+      val aRec = rec._1._2.asInstanceOf[AlignmentRecord]
+      tracks += new TrackJson(aRec.getReadName, aRec.getStart, aRec.getEnd, rec._2)
+    }
+    tracks.toList
   }
 
   //Correctly shuts down the server
@@ -56,54 +80,81 @@ object EncodeReads extends BDGCommandCompanion with Logging {
     }
     thread.start()
   }
+
 }
 
+case class TrackJson(readName: String, start: Long, end: Long, track: Long)
+case class VariationJson(contigName: String, alleles: String, start: Long, end: Long, track: Long)
+case class FreqJson(base: Long, freq: Long)
+case class FeatureJson(featureId: String, featureType: String, start: Long, end: Long, track: Long)
+case class ReferenceJson(reference: String)
+
 class EncodeReadsArgs extends Args4jBase with ParquetArgs {
+
+  @Argument(required = true, metaVar = "ref_name", usage = "The name of the reference we're looking at", index = 0)
+  var refName: String = null
+
+  @Args4jOption(required = false, name = "-read_file", usage = "The reads file to view")
+  var readsPath: String = null
+
   @Args4jOption(required = false, name = "-port", usage = "The port to bind to for visualization. The default is 8080.")
   var port: Int = 8080
 }
 
-class EncodeXServlet extends ScalatraServlet with JacksonJsonSupport {
-  protected implicit val jsonFormats: Formats = DefaultFormats
-
-  before() {
-    contentType = formats("json")
-  }
+class EncodeXServlet extends ScalatraServlet {
+  implicit val formats = net.liftweb.json.DefaultFormats
+  val viewRegion = ReferenceRegion(EncodeReads.refName, 0, 100)
 
   get("/?") {
-    redirect(url("search"))
+    redirect("/reads")
   }
 
-  get("/search") {
-    FlowerData.all
+  get("/quit") {
+    EncodeReads.quit()
   }
 
-  /*get("/search/:file") {
-    EncodeTimers.ReadsRequest.time {
-      var fileName: String = params.get("file").toString
-      if (params("ref") != null) {
-        val data = params("ref").split("-")
-        val reference = data(0).split(":")(0)
-        val start = data(0).split(":")(1).replace(",", "").toLong
-        var end: Long = start
-        if (data(1) != null) {
-          end = data(1).replace(",", "").toLong
+  get("/reads") {
+    contentType = "text/html"
+    val templateEngine = new TemplateEngine
+    if (EncodeReads.readsExist) {
+      if (EncodeReads.readsPath.endsWith(".adam")) {
+        val pred: FilterPredicate = ((LongColumn("start") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
+        val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end)
+        val readsRDD: RDD[AlignmentRecord] = EncodeReads.sc.loadParquetAlignments(EncodeReads.readsPath, predicate = Some(pred), projection = Some(proj))
+        val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
+        val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
+        val templateEngine = new TemplateEngine
+        templateEngine.layout("encodex-cli/src/main/webapp/WEB-INF/layouts/reads.ssp",
+          Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
+            "numTracks" -> filteredLayout.numTracks.toString))
+      }
+    } else {
+      templateEngine.layout("encodex-cli/src/main/webapp/WEB-INF/layouts/noreads.ssp")
+    }
+
+  }
+
+  get("/reads/:ref") {
+    EncodeXTimers.ReadsRequest.time {
+      contentType = "json"
+      val viewRegion = ReferenceRegion("chr" + params("ref"), params("start").toLong, params("end").toLong)
+      if (EncodeReads.readsPath.endsWith(".adam")) {
+        val pred: FilterPredicate = ((LongColumn("start") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
+        val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end)
+        val readsRDD: RDD[AlignmentRecord] = EncodeXTimers.LoadParquetFile.time {
+          EncodeReads.sc.loadParquetAlignments(EncodeReads.readsPath, predicate = Some(pred), projection = Some(proj))
         }
+        val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
+        val collected = EncodeXTimers.DoingCollect.time {
+          trackinput.collect()
+        }
+        val filteredLayout = EncodeXTimers.MakingTrack.time {
+          new OrderedTrackedLayout(collected)
+        }
+        write(EncodeReads.printTrackJson(filteredLayout))
       }
     }
-  }*/
-}
-
-// A Flower object to use as a faked-out data model
-case class Flower(slug: String, name: String)
-
-// An amazing datastore!
-object FlowerData {
-  var all = List(
-      Flower("yellow-tulip", "Yellow Tulip"),
-      Flower("red-rose", "Red Rose"),
-      Flower("black-rose", "Black Rose")
-  )
+  }
 }
 
 class EncodeReads(protected val args: EncodeReadsArgs) extends BDGSparkCommand[EncodeReadsArgs] with Logging {
@@ -112,12 +163,30 @@ class EncodeReads(protected val args: EncodeReadsArgs) extends BDGSparkCommand[E
   override def run(sc: SparkContext): Unit = {
     EncodeReads.sc = sc
 
+    val readsPath = Option(args.readsPath)
+    readsPath match {
+      case Some(_) => {
+        if (args.readsPath.endsWith(".bam") || args.readsPath.endsWith(".sam") || args.readsPath.endsWith(".adam")) {
+          EncodeReads.readsPath = args.readsPath
+          EncodeReads.readsExist = true
+        } else {
+          log.info("WARNING: Invalid input for reads file")
+          println("WARNING: Invalid input for reads file")
+        }
+      }
+      case None => {
+        log.info("WARNING: No reads file provided")
+        println("WARNING: No reads file provided")
+      }
+    }
+
     EncodeReads.server = new org.eclipse.jetty.server.Server(args.port)
     val handlers = new org.eclipse.jetty.server.handler.ContextHandlerCollection()
     EncodeReads.server.setHandler(handlers)
     handlers.addHandler(new org.eclipse.jetty.webapp.WebAppContext("encodex-cli/src/main/webapp", "/"))
     EncodeReads.server.start()
-    println("Search file at: /search/:file")
+    println("View the visualization at: " + args.port)
+    println("Overlapping reads visualization at: /reads")
     println("Quit at: /quit")
     EncodeReads.server.join()
   }
