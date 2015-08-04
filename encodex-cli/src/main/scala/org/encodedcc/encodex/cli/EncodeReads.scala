@@ -39,11 +39,9 @@ object EncodeReads extends BDGCommandCompanion with Logging {
 
   val commandName: String = "encode-x"
   val commandDescription: String = "distributed engine for ENCODE data"
+  val filesLocation: String = "/user/nikhilrp/encoded-data/mm10/"
 
   var sc: SparkContext = null
-  var refName: String = ""
-  var readsPath: String = ""
-  var readsExist: Boolean = false
   var server: org.eclipse.jetty.server.Server = null
 
   def apply(cmdLine: Array[String]): BDGCommand = {
@@ -91,19 +89,12 @@ case class ReferenceJson(reference: String)
 
 class EncodeReadsArgs extends Args4jBase with ParquetArgs {
 
-  @Argument(required = true, metaVar = "ref_name", usage = "The name of the reference we're looking at", index = 0)
-  var refName: String = null
-
-  @Args4jOption(required = false, name = "-read_file", usage = "The reads file to view")
-  var readsPath: String = null
-
   @Args4jOption(required = false, name = "-port", usage = "The port to bind to for visualization. The default is 8080.")
   var port: Int = 8080
 }
 
 class EncodeXServlet extends ScalatraServlet {
   implicit val formats = net.liftweb.json.DefaultFormats
-  val viewRegion = ReferenceRegion(EncodeReads.refName, 0, 100)
 
   get("/?") {
     redirect("/reads")
@@ -114,45 +105,32 @@ class EncodeXServlet extends ScalatraServlet {
   }
 
   get("/reads") {
-    contentType = "text/html"
-    val templateEngine = new TemplateEngine
-    if (EncodeReads.readsExist) {
-      if (EncodeReads.readsPath.endsWith(".adam")) {
-        val pred: FilterPredicate = ((LongColumn("start") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
-        val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end)
-        val readsRDD: RDD[AlignmentRecord] = EncodeReads.sc.loadParquetAlignments(EncodeReads.readsPath, predicate = Some(pred), projection = Some(proj))
-        val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
-        val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
-        val templateEngine = new TemplateEngine
-        templateEngine.layout("encodex-cli/src/main/webapp/WEB-INF/layouts/reads.ssp",
-          Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-            "numTracks" -> filteredLayout.numTracks.toString))
-      }
-    } else {
-      templateEngine.layout("encodex-cli/src/main/webapp/WEB-INF/layouts/noreads.ssp")
-    }
-
+    contentType = "json"
+    write("Please enter file name eg: /reads/ENCFF984VBZ")
   }
 
-  get("/reads/:ref") {
+  get("/reads/:file") {
     EncodeXTimers.ReadsRequest.time {
       contentType = "json"
-      val viewRegion = ReferenceRegion("chr" + params("ref"), params("start").toLong, params("end").toLong)
-      if (EncodeReads.readsPath.endsWith(".adam")) {
-        val pred: FilterPredicate = ((LongColumn("start") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
-        val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end)
-        val readsRDD: RDD[AlignmentRecord] = EncodeXTimers.LoadParquetFile.time {
-          EncodeReads.sc.loadParquetAlignments(EncodeReads.readsPath, predicate = Some(pred), projection = Some(proj))
-        }
-        val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
-        val collected = EncodeXTimers.DoingCollect.time {
-          trackinput.collect()
-        }
-        val filteredLayout = EncodeXTimers.MakingTrack.time {
-          new OrderedTrackedLayout(collected)
-        }
-        write(EncodeReads.printTrackJson(filteredLayout))
+      var start: Long = params.getOrElse("start", "0").toLong;
+      var end: Long = params.getOrElse("end", "100").toLong;
+      var refName: String = params.getOrElse("ref", "chr1");
+      var fileName: String = params.getOrElse("file", "ENCFF984VBZ");
+      var pred: FilterPredicate = ((LongColumn("start") < end) && (LongColumn("end") > start))
+      var proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end)
+      var readsRDD: RDD[AlignmentRecord] = EncodeXTimers.LoadParquetFile.time {
+        EncodeReads.sc.loadParquetAlignments(EncodeReads.filesLocation + refName + "/" + fileName + ".adam",
+          predicate = Some(pred),
+          projection = Some(proj))
       }
+      var trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
+      var collected = EncodeXTimers.DoingCollect.time {
+        trackinput.collect()
+      }
+      var filteredLayout = EncodeXTimers.MakingTrack.time {
+        new OrderedTrackedLayout(collected)
+      }
+      write(EncodeReads.printTrackJson(filteredLayout))
     }
   }
 }
@@ -163,30 +141,12 @@ class EncodeReads(protected val args: EncodeReadsArgs) extends BDGSparkCommand[E
   override def run(sc: SparkContext): Unit = {
     EncodeReads.sc = sc
 
-    val readsPath = Option(args.readsPath)
-    readsPath match {
-      case Some(_) => {
-        if (args.readsPath.endsWith(".bam") || args.readsPath.endsWith(".sam") || args.readsPath.endsWith(".adam")) {
-          EncodeReads.readsPath = args.readsPath
-          EncodeReads.readsExist = true
-        } else {
-          log.info("WARNING: Invalid input for reads file")
-          println("WARNING: Invalid input for reads file")
-        }
-      }
-      case None => {
-        log.info("WARNING: No reads file provided")
-        println("WARNING: No reads file provided")
-      }
-    }
-
     EncodeReads.server = new org.eclipse.jetty.server.Server(args.port)
     val handlers = new org.eclipse.jetty.server.handler.ContextHandlerCollection()
     EncodeReads.server.setHandler(handlers)
     handlers.addHandler(new org.eclipse.jetty.webapp.WebAppContext("encodex-cli/src/main/webapp", "/"))
     EncodeReads.server.start()
     println("View the visualization at: " + args.port)
-    println("Overlapping reads visualization at: /reads")
     println("Quit at: /quit")
     EncodeReads.server.join()
   }
