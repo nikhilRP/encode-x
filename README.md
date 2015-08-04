@@ -1,4 +1,4 @@
-# ENCODE-X
+# ENCODE-X (Inspired by Mango)
 
 This repo uses ADAM genomics processing engine as the base.
     
