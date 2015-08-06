@@ -6,7 +6,7 @@ This repo uses ADAM genomics processing engine as the base.
     cd encode-x
     mvn clean package -DskipTests
     
-start the server using -
+start the server using
 
     bin/encodex-submit
     
