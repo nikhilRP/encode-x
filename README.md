@@ -1,5 +1,10 @@
 # ENCODE-X
 
+Dependencies:
+
+    MapRFS (Can make it work with HDFS as well with few changes)
+    Spark >= 1.2
+
 This repo uses ADAM genomics processing engine as the base.
     
     git clone https://github.com/nikhilRP/encode-x.git
